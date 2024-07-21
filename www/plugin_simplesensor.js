@@ -52,7 +52,7 @@ class SimpleSensor{
 		return new Promise(function(resolve, reject){
 			cordova.exec(
 				function(result){
-					resolve(result.value);
+					resolve(result);
 				},
 				function(err){
 					reject(err);
