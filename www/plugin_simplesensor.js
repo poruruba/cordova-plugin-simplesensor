@@ -48,6 +48,20 @@ class SimpleSensor{
 		});
 	}
 	
+	getValue(sensorName){
+		return new Promise(function(resolve, reject){
+			cordova.exec(
+				function(result){
+					resolve(result.value);
+				},
+				function(err){
+					reject(err);
+				},
+				"SimpleSensor", "getValue",
+				[sensorName]);
+		});
+	}
+
 	setCallback(enable, callback){
 		cordova.exec(
 			function(result){

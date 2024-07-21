@@ -20,145 +20,162 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 
-public class Main extends CordovaPlugin implements SensorEventListener{
+public class Main extends CordovaPlugin implements SensorEventListener {
 	public static String TAG = "SimpleSensor.Main";
 	private Activity activity;
-	
-	class SensorInfo{
+
+	class SensorInfo {
 		public Sensor sensor;
 		public int delayType;
+		public float[] values;
 
-		public SensorInfo(Sensor sensor, int delayType){
+		public SensorInfo(Sensor sensor, int delayType) {
 			this.sensor = sensor;
 			this.delayType = delayType;
 		}
 	};
-	
-    private SensorManager sensorManager;
-    Map<String, SensorInfo> targetSensors = new HashMap<>();
-    Map<String, Integer> supportedSensors = new HashMap<>();
+
+	private SensorManager sensorManager;
+	Map<String, SensorInfo> targetSensors = new HashMap<>();
+	Map<String, Integer> supportedSensors = new HashMap<>();
+	Map<String, float[]> values = new HashMap<>();
 	boolean isRunning = false;
-    private CallbackContext callback;
+	private CallbackContext callback;
 
 	@Override
-	public void initialize(CordovaInterface cordova, CordovaWebView webView)
-	{
+	public void initialize(CordovaInterface cordova, CordovaWebView webView) {
 		Log.d(TAG, "[Plugin] initialize called");
 		super.initialize(cordova, webView);
 
 		activity = cordova.getActivity();
 
-	    sensorManager = (SensorManager) activity.getSystemService(Context.SENSOR_SERVICE);
-        List<Sensor> deviceSensors = sensorManager.getSensorList(Sensor.TYPE_ALL);
-        for( Sensor sensor: deviceSensors){
-            supportedSensors.put(sensor.getStringType(), sensor.getType());
-        }
+		sensorManager = (SensorManager) activity.getSystemService(Context.SENSOR_SERVICE);
+		List<Sensor> deviceSensors = sensorManager.getSensorList(Sensor.TYPE_ALL);
+		for (Sensor sensor : deviceSensors) {
+			supportedSensors.put(sensor.getStringType(), sensor.getType());
+		}
 	}
 
 	@Override
-	public void onResume(boolean multitasking)
-	{
+	public void onResume(boolean multitasking) {
 		Log.d(TAG, "[Plugin] onResume called");
 		super.onResume(multitasking);
-        for (String key : targetSensors.keySet()) {
-            SensorInfo sensor = targetSensors.get(key);
-            sensorManager.registerListener(this, sensor.sensor, sensor.delayType);
-        }
+		for (String key : targetSensors.keySet()) {
+			SensorInfo sensor = targetSensors.get(key);
+			sensorManager.registerListener(this, sensor.sensor, sensor.delayType);
+		}
 	}
 
 	@Override
-	public void onPause(boolean multitasking)
-	{
+	public void onPause(boolean multitasking) {
 		Log.d(TAG, "[Plugin] onPause called");
 		super.onPause(multitasking);
 		sensorManager.unregisterListener(this);
 	}
 
 	@Override
-	public void onNewIntent(Intent intent)
-	{
+	public void onNewIntent(Intent intent) {
 		Log.d(TAG, "[Plugin] onNewIntent called");
 		super.onNewIntent(intent);
 	}
 
-    void sendMessageToJs(JSONObject message) {
-        if (callback != null) {
-            final PluginResult result = new PluginResult(PluginResult.Status.OK, message);
-            result.setKeepCallback(true);
-            callback.sendPluginResult(result);
-        }
-    }
-	
+	void sendMessageToJs(JSONObject message) {
+		if (callback != null) {
+			final PluginResult result = new PluginResult(PluginResult.Status.OK, message);
+			result.setKeepCallback(true);
+			callback.sendPluginResult(result);
+		}
+	}
+
 	@Override
-	public boolean execute(String action, JSONArray args, final CallbackContext callbackContext) throws JSONException
-	{
+	public boolean execute(String action, JSONArray args, final CallbackContext callbackContext) throws JSONException {
 		Log.d(TAG, "[Plugin] execute called");
-		if( action.equals("addSensor") ){
-			try{
+		if (action.equals("addSensor")) {
+			try {
 				String sensorName = args.getString(0);
 				int delayType = args.getInt(1);
 				int sensorType = supportedSensors.get(sensorName);
 				SensorInfo sensor = targetSensors.get(sensorName);
-				if( sensor == null ){
-                	Sensor defaultSensor = sensorManager.getDefaultSensor(sensorType);
-					if (defaultSensor != null){
-                    	targetSensors.put(sensorName, new SensorInfo(defaultSensor, delayType));
+				if (sensor == null) {
+					Sensor defaultSensor = sensorManager.getDefaultSensor(sensorType);
+					if (defaultSensor != null) {
+						targetSensors.put(sensorName, new SensorInfo(defaultSensor, delayType));
 						sensorManager.registerListener(this, defaultSensor, delayType);
 					}
 				}
 				callbackContext.success();
-			}catch(Exception ex){
+			} catch (Exception ex) {
 				callbackContext.error(ex.getMessage());
 			}
-		}else
-		
-		if( action.equals("removeSensor") ){
-			try{
+		} else
+
+		if (action.equals("removeSensor")) {
+			try {
 				String sensorName = args.getString(0);
 				SensorInfo sensor = targetSensors.get(sensorName);
-				if( sensor != null ){
+				if (sensor != null) {
 					sensorManager.unregisterListener(this, sensor.sensor);
 					targetSensors.remove(sensorName);
 				}
 				callbackContext.success();
-			}catch(Exception ex){
+			} catch (Exception ex) {
 				callbackContext.error(ex.getMessage());
 			}
-		}else
-		
-		if( action.equals("getSupportedSensors") ){
-			try{
+		} else
+
+		if (action.equals("getSupportedSensors")) {
+			try {
 				JSONObject result = new JSONObject();
 				JSONArray array = new JSONArray();
 				for (String key : supportedSensors.keySet()) {
-				    array.put(key);
+					array.put(key);
 				}
 				result.put("list", array);
-				
+
 				callbackContext.success(result);
 			} catch (Exception ex) {
 				callbackContext.error(ex.getMessage());
 			}
-		}else
-		
-        if (action.equals("setCallback")) {
-            if (args.length() < 1) {
-                callbackContext.error("invalid params");
-                return false;
-            }
+		} else
 
-            try{
-                boolean arg0 = args.getBoolean(0);
-                if( arg0 ){
-                    callback = callbackContext;
-                }else{
-                    callback = null;
-                    callbackContext.success("OK");
-                }
-            }catch(Exception ex){
-                callbackContext.error(ex.getMessage());
-            }
-        } else
+		if (action.equals("getValue")) {
+			try {
+				String sensorName = args.getString(0);
+				SensorInfo sensor = targetSensors.get(sensorName);
+				if (sensor != null) {
+					JSONObject result = new JSONObject();
+					JSONArray array = new JSONArray();
+					for (int i = 0; i < list.length; i++)
+						array.put(list[i]);
+					result.put("value", array);
+
+					callbackContext.success(result);
+				} else {
+					callbackContext.error("data not ready");
+				}
+			} catch (Exception ex) {
+				callbackContext.error(ex.getMessage());
+			}
+		} else
+
+		if (action.equals("setCallback")) {
+			if (args.length() < 1) {
+				callbackContext.error("invalid params");
+				return false;
+			}
+
+			try {
+				boolean arg0 = args.getBoolean(0);
+				if (arg0) {
+					callback = callbackContext;
+				} else {
+					callback = null;
+					callbackContext.success("OK");
+				}
+			} catch (Exception ex) {
+				callbackContext.error(ex.getMessage());
+			}
+		} else
 
 		{
 			String message = "Unknown action : (" + action + ") " + args.getString(0);
@@ -169,27 +186,30 @@ public class Main extends CordovaPlugin implements SensorEventListener{
 
 		return true;
 	}
-	
-    @Override
-    public void onSensorChanged(SensorEvent sensorEvent) {
-    	try{
-	    	JSONObject result = new JSONObject();
-	    	result.put("sensorType", sensorEvent.sensor.getStringType());
-	    	result.put("accuracy", sensorEvent.accuracy);
-	    	JSONArray array = new JSONArray();
+
+	@Override
+	public void onSensorChanged(SensorEvent sensorEvent) {
+		SensorInfo sensor = targetSensors.get(sensorName);
+		if (sensor != null)
+			sensor.values = sensorEvent.values;
+
+		try {
+			JSONObject result = new JSONObject();
+			result.put("sensorType", sensorEvent.sensor.getStringType());
+			result.put("accuracy", sensorEvent.accuracy);
+			JSONArray array = new JSONArray();
 			float[] list = sensorEvent.values;
 			for (int i = 0; i < list.length; i++)
-			    array.put(list[i]);
+				array.put(list[i]);
 			result.put("value", array);
 			sendMessageToJs(result);
-    	}catch(Exception ex){
-    		Log.e(TAG, ex.getMessage());
-    	}
-    }
+		} catch (Exception ex) {
+			Log.e(TAG, ex.getMessage());
+		}
+	}
 
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int i) {
-        // Do something here if sensor accuracy changes.
-    }
+	@Override
+	public void onAccuracyChanged(Sensor sensor, int i) {
+		// Do something here if sensor accuracy changes.
+	}
 }
-
