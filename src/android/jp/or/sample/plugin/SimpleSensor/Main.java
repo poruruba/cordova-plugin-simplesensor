@@ -39,7 +39,6 @@ public class Main extends CordovaPlugin implements SensorEventListener {
 	private SensorManager sensorManager;
 	Map<String, SensorInfo> targetSensors = new HashMap<>();
 	Map<String, Integer> supportedSensors = new HashMap<>();
-	Map<String, float[]> values = new HashMap<>();
 	boolean isRunning = false;
 	private CallbackContext callback;
 
@@ -163,11 +162,6 @@ public class Main extends CordovaPlugin implements SensorEventListener {
 		} else
 
 		if (action.equals("setCallback")) {
-			if (args.length() < 1) {
-				callbackContext.error("invalid params");
-				return false;
-			}
-
 			try {
 				boolean arg0 = args.getBoolean(0);
 				if (arg0) {
