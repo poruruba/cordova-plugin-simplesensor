@@ -27,6 +27,7 @@ public class Main extends CordovaPlugin implements SensorEventListener {
 	class SensorInfo {
 		public Sensor sensor;
 		public int delayType;
+		public int accuracy;
 		public float[] values;
 
 		public SensorInfo(Sensor sensor, int delayType) {
@@ -146,10 +147,13 @@ public class Main extends CordovaPlugin implements SensorEventListener {
 					throw new Error("sensor not ready");
 				if( sensor.values == null )
 					throw new Error("value not ready");
+
 				JSONObject result = new JSONObject();
+				result.put("sensorType", sensorName);
+				result.put("accuracy", sensor.accuracy);
 				JSONArray array = new JSONArray();
-				for (int i = 0; i < list.length; i++)
-					array.put(list[i]);
+				for (int i = 0; i < sensor.values.length; i++)
+					array.put(sensor.values[i]);
 				result.put("value", array);
 
 				callbackContext.success(result);
@@ -189,9 +193,11 @@ public class Main extends CordovaPlugin implements SensorEventListener {
 
 	@Override
 	public void onSensorChanged(SensorEvent sensorEvent) {
-		SensorInfo sensor = targetSensors.get(sensorName);
-		if (sensor != null)
-			sensor.values = sensorEvent.values;
+		SensorInfo sensor = targetSensors.get(sensorEvent.sensor.getStringType());
+		if (sensor == null)
+			return;
+		sensor.values = sensorEvent.values;
+		sensor.accuracy = sensorEvent.accuracy;
 
 		try {
 			JSONObject result = new JSONObject();
