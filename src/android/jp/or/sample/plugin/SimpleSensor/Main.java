@@ -142,17 +142,17 @@ public class Main extends CordovaPlugin implements SensorEventListener {
 			try {
 				String sensorName = args.getString(0);
 				SensorInfo sensor = targetSensors.get(sensorName);
-				if (sensor != null) {
-					JSONObject result = new JSONObject();
-					JSONArray array = new JSONArray();
-					for (int i = 0; i < list.length; i++)
-						array.put(list[i]);
-					result.put("value", array);
+				if (sensor == null)
+					throw new Error("sensor not ready");
+				if( sensor.values == null )
+					throw new Error("value not ready");
+				JSONObject result = new JSONObject();
+				JSONArray array = new JSONArray();
+				for (int i = 0; i < list.length; i++)
+					array.put(list[i]);
+				result.put("value", array);
 
-					callbackContext.success(result);
-				} else {
-					callbackContext.error("data not ready");
-				}
+				callbackContext.success(result);
 			} catch (Exception ex) {
 				callbackContext.error(ex.getMessage());
 			}
